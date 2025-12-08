@@ -30,6 +30,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Админка</a>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_hotels') }}">Отели</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_rooms') }}">Номера</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_bookings') }}">Бронирования</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_users') }}">Пользователи</a></li>

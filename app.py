@@ -304,6 +304,78 @@ def create_app(config_name: str = "default") -> Flask:
         users = User.query.order_by(User.created_at.desc()).all()
         return render_template("admin/users.html", users=users)
 
+    @app.route("/admin/hotels")
+    @login_required
+    def admin_hotels():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Hotel
+
+        hotels = Hotel.query.order_by(Hotel.name).all()
+        return render_template("admin/hotels.html", hotels=hotels)
+
+    @app.route("/admin/hotels/create", methods=["GET", "POST"])
+    @login_required
+    def admin_create_hotel():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Hotel
+
+        if request.method == "POST":
+            name = request.form.get("name", "").strip()
+            city = request.form.get("city", "").strip()
+
+            if not name:
+                flash("Укажите название отеля", "danger")
+            elif Hotel.query.filter_by(name=name).first():
+                flash("Отель с таким названием уже есть", "danger")
+            else:
+                hotel = Hotel(name=name, city=city or None)
+                db.session.add(hotel)
+                db.session.commit()
+                flash("Отель создан", "success")
+                return redirect(url_for("admin_hotels"))
+
+        return render_template("admin/hotel_form.html")
+
+    @app.route("/admin/hotels/<int:hotel_id>/edit", methods=["GET", "POST"])
+    @login_required
+    def admin_edit_hotel(hotel_id: int):
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Hotel
+
+        hotel = Hotel.query.get_or_404(hotel_id)
+
+        if request.method == "POST":
+            name = request.form.get("name", "").strip()
+            city = request.form.get("city", "").strip()
+
+            duplicate = (
+                Hotel.query.filter(Hotel.id != hotel.id, Hotel.name == name)
+                .first()
+                if name
+                else None
+            )
+            if not name:
+                flash("Укажите название отеля", "danger")
+            elif duplicate:
+                flash("Отель с таким названием уже есть", "danger")
+            else:
+                hotel.name = name
+                hotel.city = city or None
+                db.session.commit()
+                flash("Отель обновлён", "success")
+                return redirect(url_for("admin_hotels"))
+
+        return render_template("admin/hotel_form.html", hotel=hotel)
+
     return app
 
 
