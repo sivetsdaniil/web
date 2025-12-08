@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Номер {{ room.number }} — Hotel Booking{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1>Номер {{ room.number }}</h1>
+        <h4 class="text-muted mb-3">{{ room.room_type }}</h4>
+        <p class="mb-3">
+            {% if room.description %}
+                {{ room.description }}
+            {% else %}
+                Описание будет добавлено позже.
+            {% endif %}
+        </p>
+        <p class="fw-bold">Цена: {{ room.price_per_night }} ₽ / ночь</p>
+        <p>Вместимость: {{ room.capacity }} чел.</p>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Забронировать</h5>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('book_room', room_id=room.id) }}" class="btn btn-success w-100">Перейти к бронированию</a>
+                {% else %}
+                    <p class="mb-2">Чтобы забронировать номер, войдите или зарегистрируйтесь.</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-primary w-100 mb-2">Войти</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-secondary w-100">Регистрация</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

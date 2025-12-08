@@ -1,0 +1,266 @@
+from datetime import datetime
+
+from flask import (
+    Flask,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    request,
+)
+from flask_login import (
+    LoginManager,
+    login_user,
+    logout_user,
+    login_required,
+    current_user,
+)
+
+from config import config
+from extensions import db
+
+login_manager = LoginManager()
+login_manager.login_view = "login"
+
+
+def create_app(config_name: str = "default") -> Flask:
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+
+    db.init_app(app)
+    login_manager.init_app(app)
+
+    from models import User, Room, Booking  # noqa: F401
+
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        return User.query.get(int(user_id))
+
+    @app.route("/")
+    def index():
+        rooms = Room.query.order_by(Room.price_per_night).all()
+        return render_template("index.html", rooms=rooms)
+
+    @app.route("/room/<int:room_id>")
+    def room_detail(room_id: int):
+        room = Room.query.get_or_404(room_id)
+        return render_template("room_detail.html", room=room)
+
+    @app.route("/register", methods=["GET", "POST"])
+    def register():
+        from models import User  # local import to avoid circular
+
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            name = request.form.get("name", "").strip()
+            password = request.form.get("password", "")
+
+            if not email or not password or not name:
+                flash("Заполните все поля", "danger")
+            elif User.query.filter_by(email=email).first():
+                flash("Пользователь с таким email уже существует", "danger")
+            else:
+                user = User(email=email, name=name)
+                user.set_password(password)
+                db.session.add(user)
+                db.session.commit()
+                flash("Регистрация успешна, теперь можете войти", "success")
+                return redirect(url_for("login"))
+
+        return render_template("auth/register.html")
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        from models import User
+
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+
+            user = User.query.filter_by(email=email).first()
+            if user and user.check_password(password):
+                login_user(user)
+                flash("Вы успешно вошли", "success")
+                next_page = request.args.get("next") or url_for("index")
+                return redirect(next_page)
+            flash("Неверный email или пароль", "danger")
+
+        return render_template("auth/login.html")
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        logout_user()
+        flash("Вы вышли из аккаунта", "info")
+        return redirect(url_for("index"))
+
+    @app.route("/book/<int:room_id>", methods=["GET", "POST"])
+    @login_required
+    def book_room(room_id: int):
+        from models import Room, Booking
+
+        room = Room.query.get_or_404(room_id)
+
+        if request.method == "POST":
+            check_in_str = request.form.get("check_in")
+            check_out_str = request.form.get("check_out")
+
+            try:
+                check_in = datetime.strptime(check_in_str, "%Y-%m-%d").date()
+                check_out = datetime.strptime(check_out_str, "%Y-%m-%d").date()
+            except (TypeError, ValueError):
+                flash("Некорректные даты", "danger")
+                return render_template("booking/book_room.html", room=room)
+
+            if check_in >= check_out:
+                flash("Дата выезда должна быть позже даты заезда", "danger")
+                return render_template("booking/book_room.html", room=room)
+
+            overlapping = Booking.query.filter(
+                Booking.room_id == room.id,
+                Booking.check_in < check_out,
+                Booking.check_out > check_in,
+            ).first()
+            if overlapping:
+                flash("На выбранные даты номер уже забронирован", "danger")
+                return render_template("booking/book_room.html", room=room)
+
+            nights = (check_out - check_in).days
+            total_price = nights * room.price_per_night
+
+            booking = Booking(
+                user_id=current_user.id,
+                room_id=room.id,
+                check_in=check_in,
+                check_out=check_out,
+                total_price=total_price,
+            )
+            db.session.add(booking)
+            db.session.commit()
+            flash("Бронирование успешно создано", "success")
+            return redirect(url_for("my_bookings"))
+
+        return render_template("booking/book_room.html", room=room)
+
+    @app.route("/my-bookings")
+    @login_required
+    def my_bookings():
+        from models import Booking
+
+        bookings = (
+            Booking.query.filter_by(user_id=current_user.id)
+            .order_by(Booking.check_in.desc())
+            .all()
+        )
+        return render_template("booking/my_bookings.html", bookings=bookings)
+
+    @app.route("/admin/rooms")
+    @login_required
+    def admin_rooms():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Room
+
+        rooms = Room.query.order_by(Room.number).all()
+        return render_template("admin/rooms.html", rooms=rooms)
+
+    @app.route("/admin/rooms/create", methods=["GET", "POST"])
+    @login_required
+    def admin_create_room():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Room
+
+        if request.method == "POST":
+            number = request.form.get("number", "").strip()
+            room_type = request.form.get("room_type", "").strip()
+            price_per_night = float(request.form.get("price_per_night", "0") or "0")
+            capacity = int(request.form.get("capacity", "1") or "1")
+            description = request.form.get("description", "").strip()
+
+            if not number or not room_type or price_per_night <= 0:
+                flash("Заполните обязательные поля и укажите корректную цену", "danger")
+            else:
+                room = Room(
+                    number=number,
+                    room_type=room_type,
+                    price_per_night=price_per_night,
+                    capacity=capacity,
+                    description=description,
+                )
+                db.session.add(room)
+                db.session.commit()
+                flash("Номер создан", "success")
+                return redirect(url_for("admin_rooms"))
+
+        return render_template("admin/room_form.html")
+
+    @app.route("/admin/rooms/<int:room_id>/edit", methods=["GET", "POST"])
+    @login_required
+    def admin_edit_room(room_id: int):
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Room
+
+        room = Room.query.get_or_404(room_id)
+
+        if request.method == "POST":
+            room.number = request.form.get("number", "").strip()
+            room.room_type = request.form.get("room_type", "").strip()
+            room.price_per_night = float(
+                request.form.get("price_per_night", room.price_per_night) or "0"
+            )
+            room.capacity = int(request.form.get("capacity", room.capacity) or "1")
+            room.description = request.form.get("description", "").strip()
+
+            if not room.number or not room.room_type or room.price_per_night <= 0:
+                flash("Заполните обязательные поля и укажите корректную цену", "danger")
+            else:
+                db.session.commit()
+                flash("Номер обновлён", "success")
+                return redirect(url_for("admin_rooms"))
+
+        return render_template("admin/room_form.html", room=room)
+
+    @app.route("/admin/bookings")
+    @login_required
+    def admin_bookings():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import Booking
+
+        bookings = Booking.query.order_by(Booking.check_in.desc()).all()
+        return render_template("admin/bookings.html", bookings=bookings)
+
+    @app.route("/admin/users")
+    @login_required
+    def admin_users():
+        if not current_user.is_admin:
+            flash("Недостаточно прав", "danger")
+            return redirect(url_for("index"))
+
+        from models import User
+
+        users = User.query.order_by(User.created_at.desc()).all()
+        return render_template("admin/users.html", users=users)
+
+    return app
+
+
+if __name__ == "__main__":
+    application = create_app()
+    with application.app_context():
+        from models import User, Room, Booking  # noqa: F401
+
+        db.create_all()
+    application.run()
+
+

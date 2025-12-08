@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Админка — Пользователи{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Пользователи</h1>
+
+{% if users %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Имя</th>
+                <th>Email</th>
+                <th>Админ</th>
+                <th>Дата регистрации</th>
+                <th>Количество бронирований</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge bg-success">Да</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Нет</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                    <td>{{ user.bookings.count() }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>Пользователей пока нет.</p>
+{% endif %}
+{% endblock %}
+
+

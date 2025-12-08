@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Админка — Бронирования{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Бронирования</h1>
+
+{% if bookings %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Пользователь</th>
+                <th>Email</th>
+                <th>Номер</th>
+                <th>Тип</th>
+                <th>Заезд</th>
+                <th>Выезд</th>
+                <th>Сумма</th>
+                <th>Создано</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for booking in bookings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ booking.user.name }}</td>
+                    <td>{{ booking.user.email }}</td>
+                    <td>{{ booking.room.number }}</td>
+                    <td>{{ booking.room.room_type }}</td>
+                    <td>{{ booking.check_in.strftime("%d.%m.%Y") }}</td>
+                    <td>{{ booking.check_out.strftime("%d.%m.%Y") }}</td>
+                    <td>{{ booking.total_price }} ₽</td>
+                    <td>{{ booking.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>Бронирований пока нет.</p>
+{% endif %}
+{% endblock %}
+
+

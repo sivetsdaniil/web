@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Админка — Номера{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Номера</h1>
+    <a href="{{ url_for('admin_create_room') }}" class="btn btn-success">Добавить номер</a>
+</div>
+
+{% if rooms %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Номер</th>
+                <th>Тип</th>
+                <th>Цена</th>
+                <th>Вместимость</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for room in rooms %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ room.number }}</td>
+                    <td>{{ room.room_type }}</td>
+                    <td>{{ room.price_per_night }} ₽</td>
+                    <td>{{ room.capacity }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('admin_edit_room', room_id=room.id) }}" class="btn btn-sm btn-outline-primary">
+                            Редактировать
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>Номеров пока нет.</p>
+{% endif %}
+{% endblock %}
+
+

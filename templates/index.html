@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Список номеров — Hotel Booking{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Доступные номера</h1>
+
+{% if rooms %}
+    <div class="row">
+        {% for room in rooms %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Номер {{ room.number }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ room.room_type }}</h6>
+                        <p class="card-text flex-grow-1">
+                            {% if room.description %}
+                                {{ room.description[:120] }}{% if room.description|length > 120 %}...{% endif %}
+                            {% else %}
+                                Описание будет добавлено позже.
+                            {% endif %}
+                        </p>
+                        <p class="fw-bold mb-1">Цена: {{ room.price_per_night }} ₽ / ночь</p>
+                        <p class="mb-3">Вместимость: {{ room.capacity }} чел.</p>
+                        <a href="{{ url_for('room_detail', room_id=room.id) }}" class="btn btn-primary mt-auto">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>Пока нет доступных номеров.</p>
+{% endif %}
+{% endblock %}
+
+
