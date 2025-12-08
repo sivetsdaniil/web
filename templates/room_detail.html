@@ -11,7 +11,14 @@
                     <h1 class="mb-1">Номер {{ room.number }}</h1>
                     <p class="text-muted mb-0">{{ room.room_type }}</p>
                 </div>
-                <span class="badge text-bg-primary">до {{ room.capacity }} чел.</span>
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <span class="badge text-bg-primary">до {{ room.capacity }} чел.</span>
+                    {% if is_currently_booked %}
+                        <span class="badge text-bg-warning">Занят сегодня</span>
+                    {% else %}
+                        <span class="badge text-bg-success">Свободен</span>
+                    {% endif %}
+                </div>
             </div>
             <p class="mb-4 text-muted">
                 {% if room.description %}
@@ -34,8 +41,14 @@
         <div class="card p-4 shadow-hover">
             <h5 class="card-title mb-3">Забронировать</h5>
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('book_room', room_id=room.id) }}" class="btn btn-primary w-100 mb-2">Перейти к бронированию</a>
-                <p class="text-muted small mb-0">Выберите даты на следующем шаге.</p>
+                <a href="{{ url_for('book_room', room_id=room.id) }}" class="btn btn-primary w-100 mb-2 {% if is_currently_booked %}disabled{% endif %}">Перейти к бронированию</a>
+                <p class="text-muted small mb-0">
+                    {% if is_currently_booked %}
+                        Сейчас номер занят — попробуйте выбрать другие даты.
+                    {% else %}
+                        Выберите даты на следующем шаге.
+                    {% endif %}
+                </p>
             {% else %}
                 <p class="mb-2 text-muted">Чтобы забронировать номер, войдите или зарегистрируйтесь.</p>
                 <a href="{{ url_for('login') }}" class="btn btn-primary w-100 mb-2">Войти</a>

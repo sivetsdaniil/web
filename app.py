@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import (
     Flask,
@@ -38,13 +38,42 @@ def create_app(config_name: str = "default") -> Flask:
 
     @app.route("/")
     def index():
+        today = date.today()
         rooms = Room.query.order_by(Room.price_per_night).all()
-        return render_template("index.html", rooms=rooms)
+
+        active_room_ids = {
+            room_id
+            for (room_id,) in Booking.query.with_entities(Booking.room_id)
+            .filter(Booking.check_in <= today, Booking.check_out > today)
+            .distinct()
+        }
+        available_count = len([room for room in rooms if room.id not in active_room_ids])
+
+        return render_template(
+            "index.html",
+            rooms=rooms,
+            total_rooms=len(rooms),
+            available_count=available_count,
+            active_room_ids=active_room_ids,
+        )
 
     @app.route("/room/<int:room_id>")
     def room_detail(room_id: int):
         room = Room.query.get_or_404(room_id)
-        return render_template("room_detail.html", room=room)
+        today = date.today()
+        is_currently_booked = (
+            Booking.query.filter(
+                Booking.room_id == room.id,
+                Booking.check_in <= today,
+                Booking.check_out > today,
+            ).first()
+            is not None
+        )
+        return render_template(
+            "room_detail.html",
+            room=room,
+            is_currently_booked=is_currently_booked,
+        )
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
