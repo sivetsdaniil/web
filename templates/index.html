@@ -78,6 +78,11 @@
                 </div>
             {% endfor %}
         </div>
+        {% if available_count == 0 %}
+            <div class="alert alert-warning mt-4" role="alert">
+                Все отели заняты на выбранные даты. Попробуйте другие даты или загляните позже.
+            </div>
+        {% endif %}
     {% else %}
         <div class="empty-state text-center p-5 rounded-4 shadow-sm">
             <div class="empty-icon mb-3">🛏️</div>

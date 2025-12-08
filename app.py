@@ -200,6 +200,21 @@ def create_app(config_name: str = "default") -> Flask:
         )
         return render_template("booking/my_bookings.html", bookings=bookings)
 
+    @app.post("/my-bookings/<int:booking_id>/delete")
+    @login_required
+    def delete_booking(booking_id: int):
+        from models import Booking
+
+        booking = Booking.query.filter_by(id=booking_id, user_id=current_user.id).first()
+        if not booking:
+            flash("Бронирование не найдено", "danger")
+            return redirect(url_for("my_bookings"))
+
+        db.session.delete(booking)
+        db.session.commit()
+        flash("Бронирование удалено", "success")
+        return redirect(url_for("my_bookings"))
+
     @app.route("/admin/rooms")
     @login_required
     def admin_rooms():

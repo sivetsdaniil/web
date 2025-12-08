@@ -17,6 +17,7 @@
                 <th>Выезд</th>
                 <th>Цена</th>
                 <th>Создано</th>
+                <th></th>
             </tr>
             </thead>
             <tbody>
@@ -29,6 +30,11 @@
                     <td>{{ booking.check_out.strftime("%d.%m.%Y") }}</td>
                     <td>{{ booking.total_price }} ₽</td>
                     <td>{{ booking.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                    <td class="text-end">
+                        <form method="post" action="{{ url_for('delete_booking', booking_id=booking.id) }}" onsubmit="return confirm('Удалить бронирование?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                        </form>
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>
