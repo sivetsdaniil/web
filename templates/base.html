@@ -13,7 +13,7 @@
 <body>
 <div class="bg-gradient"></div>
 
-<nav class="navbar navbar-expand-lg navbar-dark glass-nav shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-light glass-nav shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
             <span class="brand-dot me-2"></span>Hotel Booking
@@ -48,14 +48,14 @@
                         <span class="navbar-text me-3 small text-uppercase text-muted">Привет, {{ current_user.name }}</span>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-outline-light btn-sm px-3" href="{{ url_for('logout') }}">Выйти</a>
+                        <a class="btn btn-outline-primary btn-sm px-3" href="{{ url_for('logout') }}">Выйти</a>
                     </li>
                 {% else %}
                     <li class="nav-item me-2">
-                        <a class="btn btn-outline-light btn-sm px-3" href="{{ url_for('login') }}">Войти</a>
+                        <a class="btn btn-outline-primary btn-sm px-3" href="{{ url_for('login') }}">Войти</a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-light btn-sm px-3" href="{{ url_for('register') }}">Регистрация</a>
+                        <a class="btn btn-primary btn-sm px-3" href="{{ url_for('register') }}">Регистрация</a>
                     </li>
                 {% endif %}
             </ul>
