@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from sqlalchemy import text
 
 from flask import (
     Flask,
@@ -30,7 +31,7 @@ def create_app(config_name: str = "default") -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
 
-    from models import User, Room, Booking  # noqa: F401
+    from models import User, Room, Booking, Hotel  # noqa: F401
 
     @login_manager.user_loader
     def load_user(user_id: str):
@@ -38,8 +39,20 @@ def create_app(config_name: str = "default") -> Flask:
 
     @app.route("/")
     def index():
+        from models import Hotel
+
         today = date.today()
-        rooms = Room.query.order_by(Room.price_per_night).all()
+        hotels = Hotel.query.order_by(Hotel.name).all()
+
+        selected_hotel_id = request.args.get("hotel_id", type=int)
+        if hotels and not selected_hotel_id:
+            selected_hotel_id = hotels[0].id
+
+        rooms_query = Room.query.order_by(Room.price_per_night)
+        if selected_hotel_id:
+            rooms_query = rooms_query.filter(Room.hotel_id == selected_hotel_id)
+
+        rooms = rooms_query.all()
 
         active_room_ids = {
             room_id
@@ -52,6 +65,8 @@ def create_app(config_name: str = "default") -> Flask:
         return render_template(
             "index.html",
             rooms=rooms,
+            hotels=hotels,
+            selected_hotel_id=selected_hotel_id,
             total_rooms=len(rooms),
             available_count=available_count,
             active_room_ids=active_room_ids,
@@ -60,6 +75,7 @@ def create_app(config_name: str = "default") -> Flask:
     @app.route("/room/<int:room_id>")
     def room_detail(room_id: int):
         room = Room.query.get_or_404(room_id)
+        hotel = room.hotel
         today = date.today()
         is_currently_booked = (
             Booking.query.filter(
@@ -72,6 +88,7 @@ def create_app(config_name: str = "default") -> Flask:
         return render_template(
             "room_detail.html",
             room=room,
+            hotel=hotel,
             is_currently_booked=is_currently_booked,
         )
 
@@ -202,21 +219,24 @@ def create_app(config_name: str = "default") -> Flask:
             flash("Недостаточно прав", "danger")
             return redirect(url_for("index"))
 
-        from models import Room
+        from models import Room, Hotel
 
+        hotels = Hotel.query.order_by(Hotel.name).all()
         if request.method == "POST":
             number = request.form.get("number", "").strip()
             room_type = request.form.get("room_type", "").strip()
             price_per_night = float(request.form.get("price_per_night", "0") or "0")
             capacity = int(request.form.get("capacity", "1") or "1")
             description = request.form.get("description", "").strip()
+            hotel_id = request.form.get("hotel_id", type=int)
 
-            if not number or not room_type or price_per_night <= 0:
-                flash("Заполните обязательные поля и укажите корректную цену", "danger")
+            if not number or not room_type or price_per_night <= 0 or not hotel_id:
+                flash("Заполните обязательные поля и выберите отель", "danger")
             else:
                 room = Room(
                     number=number,
                     room_type=room_type,
+                    hotel_id=hotel_id,
                     price_per_night=price_per_night,
                     capacity=capacity,
                     description=description,
@@ -226,7 +246,7 @@ def create_app(config_name: str = "default") -> Flask:
                 flash("Номер создан", "success")
                 return redirect(url_for("admin_rooms"))
 
-        return render_template("admin/room_form.html")
+        return render_template("admin/room_form.html", hotels=hotels)
 
     @app.route("/admin/rooms/<int:room_id>/edit", methods=["GET", "POST"])
     @login_required
@@ -235,9 +255,10 @@ def create_app(config_name: str = "default") -> Flask:
             flash("Недостаточно прав", "danger")
             return redirect(url_for("index"))
 
-        from models import Room
+        from models import Room, Hotel
 
         room = Room.query.get_or_404(room_id)
+        hotels = Hotel.query.order_by(Hotel.name).all()
 
         if request.method == "POST":
             room.number = request.form.get("number", "").strip()
@@ -247,15 +268,17 @@ def create_app(config_name: str = "default") -> Flask:
             )
             room.capacity = int(request.form.get("capacity", room.capacity) or "1")
             room.description = request.form.get("description", "").strip()
+            hotel_id = request.form.get("hotel_id", type=int)
 
-            if not room.number or not room.room_type or room.price_per_night <= 0:
-                flash("Заполните обязательные поля и укажите корректную цену", "danger")
+            if not room.number or not room.room_type or room.price_per_night <= 0 or not hotel_id:
+                flash("Заполните обязательные поля и выберите отель", "danger")
             else:
+                room.hotel_id = hotel_id
                 db.session.commit()
                 flash("Номер обновлён", "success")
                 return redirect(url_for("admin_rooms"))
 
-        return render_template("admin/room_form.html", room=room)
+        return render_template("admin/room_form.html", room=room, hotels=hotels)
 
     @app.route("/admin/bookings")
     @login_required
@@ -290,6 +313,12 @@ if __name__ == "__main__":
         from models import User, Room, Booking  # noqa: F401
 
         db.create_all()
+        # Однократное добавление столбца hotel_id для существующей таблицы rooms (SQLite)
+        try:
+            db.session.execute(text("ALTER TABLE rooms ADD COLUMN hotel_id INTEGER"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     application.run()
 
 

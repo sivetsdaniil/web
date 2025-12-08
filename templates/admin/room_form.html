@@ -33,6 +33,20 @@
                value="{{ room.capacity if room else 1 }}" required>
     </div>
     <div class="mb-3">
+        <label for="hotel_id" class="form-label">Отель</label>
+        <select class="form-select" id="hotel_id" name="hotel_id" required>
+            <option value="" disabled {% if not (room and room.hotel_id) %}selected{% endif %}>Выберите отель</option>
+            {% for hotel in hotels %}
+                <option value="{{ hotel.id }}" {% if room and room.hotel_id == hotel.id %}selected{% endif %}>
+                    {{ hotel.name }}{% if hotel.city %} — {{ hotel.city }}{% endif %}
+                </option>
+            {% endfor %}
+        </select>
+        {% if not hotels %}
+            <div class="form-text text-danger">Сначала создайте отель в базе.</div>
+        {% endif %}
+    </div>
+    <div class="mb-3">
         <label for="description" class="form-label">Описание</label>
         <textarea class="form-control" id="description" name="description" rows="4">{{ room.description if room else '' }}</textarea>
     </div>

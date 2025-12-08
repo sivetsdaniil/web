@@ -33,12 +33,14 @@ class Room(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(20), unique=True, nullable=False)
+    hotel_id = db.Column(db.Integer, db.ForeignKey("hotels.id"), nullable=True)
     room_type = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=True)
     price_per_night = db.Column(db.Float, nullable=False)
     capacity = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    hotel = db.relationship("Hotel", back_populates="rooms")
     bookings = db.relationship("Booking", back_populates="room", lazy="dynamic")
 
     def __repr__(self) -> str:  # pragma: no cover - для отладки
@@ -61,5 +63,19 @@ class Booking(db.Model):
 
     def __repr__(self) -> str:  # pragma: no cover - для отладки
         return f"<Booking room={self.room_id} user={self.user_id}>"
+
+
+class Hotel(db.Model):
+    __tablename__ = "hotels"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    city = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    rooms = db.relationship("Room", back_populates="hotel", lazy="dynamic")
+
+    def __repr__(self) -> str:  # pragma: no cover - для отладки
+        return f"<Hotel {self.name}>"
 
 

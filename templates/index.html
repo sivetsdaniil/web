@@ -23,54 +23,73 @@
     </div>
 </section>
 
-{% if rooms %}
-    <div class="d-flex justify-content-between align-items-center mb-3" id="rooms-grid">
-        <h2 class="h4 mb-0">Доступные номера</h2>
-        <div class="text-muted small">
-            Свободно {{ available_count }} из {{ total_rooms }}
+{% if hotels %}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3" id="rooms-grid">
+        <div>
+            <h2 class="h4 mb-1">Доступные номера</h2>
+            <div class="text-muted small">Свободно {{ available_count }} из {{ total_rooms }}</div>
         </div>
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label for="hotel_id" class="text-muted small mb-0">Отель</label>
+            <select id="hotel_id" name="hotel_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                {% for hotel in hotels %}
+                    <option value="{{ hotel.id }}" {% if hotel.id == selected_hotel_id %}selected{% endif %}>{{ hotel.name }}{% if hotel.city %} — {{ hotel.city }}{% endif %}</option>
+                {% endfor %}
+            </select>
+            <noscript><button class="btn btn-primary btn-sm" type="submit">Показать</button></noscript>
+        </form>
     </div>
-    <div class="row g-4">
-        {% for room in rooms %}
-            <div class="col-md-4">
-                <div class="card h-100 shadow-hover border-0 overflow-hidden">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h5 class="card-title mb-1">Номер {{ room.number }}</h5>
-                                <p class="card-subtitle text-muted small">{{ room.room_type }}</p>
+
+    {% if rooms %}
+        <div class="row g-4">
+            {% for room in rooms %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-hover border-0 overflow-hidden">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <p class="text-muted small mb-1">{{ room.hotel.name if room.hotel else "Без отеля" }}</p>
+                                    <h5 class="card-title mb-1">Номер {{ room.number }}</h5>
+                                    <p class="card-subtitle text-muted small">{{ room.room_type }}</p>
+                                </div>
+                                <span class="badge text-bg-primary">до {{ room.capacity }} чел.</span>
                             </div>
-                            <span class="badge text-bg-primary">до {{ room.capacity }} чел.</span>
-                        </div>
-                        <p class="card-text flex-grow-1 text-muted">
-                            {% if room.description %}
-                                {{ room.description[:150] }}{% if room.description|length > 150 %}...{% endif %}
-                            {% else %}
-                                Описание будет добавлено позже.
-                            {% endif %}
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                <p class="fw-bold mb-0">{{ room.price_per_night }} ₽</p>
-                                <small class="text-muted d-block mb-1">за ночь</small>
-                                {% if room.id in active_room_ids %}
-                                    <span class="badge text-bg-warning">Занят сейчас</span>
+                            <p class="card-text flex-grow-1 text-muted">
+                                {% if room.description %}
+                                    {{ room.description[:150] }}{% if room.description|length > 150 %}...{% endif %}
                                 {% else %}
-                                    <span class="badge text-bg-success">Свободен</span>
+                                    Описание будет добавлено позже.
                                 {% endif %}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    <p class="fw-bold mb-0">{{ room.price_per_night }} ₽</p>
+                                    <small class="text-muted d-block mb-1">за ночь</small>
+                                    {% if room.id in active_room_ids %}
+                                        <span class="badge text-bg-warning">Занят сейчас</span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">Свободен</span>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ url_for('room_detail', room_id=room.id, hotel_id=selected_hotel_id) }}" class="btn btn-outline-primary">Подробнее</a>
                             </div>
-                            <a href="{{ url_for('room_detail', room_id=room.id) }}" class="btn btn-outline-primary">Подробнее</a>
                         </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center p-5 rounded-4 shadow-sm">
+            <div class="empty-icon mb-3">🛏️</div>
+            <h5 class="mb-2">В выбранном отеле нет номеров</h5>
+            <p class="text-muted mb-0">Выберите другой отель.</p>
+        </div>
+    {% endif %}
 {% else %}
     <div class="empty-state text-center p-5 rounded-4 shadow-sm">
-        <div class="empty-icon mb-3">🛏️</div>
-        <h5 class="mb-2">Пока нет доступных номеров</h5>
-        <p class="text-muted mb-0">Загляните позже — новые варианты появляются ежедневно.</p>
+        <div class="empty-icon mb-3">🏨</div>
+        <h5 class="mb-2">Отели ещё не добавлены</h5>
+        <p class="text-muted mb-0">Создайте хотя бы один отель в базе.</p>
     </div>
 {% endif %}
 {% endblock %}

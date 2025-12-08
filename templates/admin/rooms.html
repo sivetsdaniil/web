@@ -15,6 +15,7 @@
             <tr>
                 <th>#</th>
                 <th>Номер</th>
+                <th>Отель</th>
                 <th>Тип</th>
                 <th>Цена</th>
                 <th>Вместимость</th>
@@ -26,6 +27,7 @@
                 <tr>
                     <td>{{ loop.index }}</td>
                     <td>{{ room.number }}</td>
+                    <td>{{ room.hotel.name if room.hotel else "—" }}</td>
                     <td>{{ room.room_type }}</td>
                     <td>{{ room.price_per_night }} ₽</td>
                     <td>{{ room.capacity }}</td>
