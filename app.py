@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 from sqlalchemy import text
 
 from flask import (
@@ -30,11 +30,26 @@ def create_app(config_name: str = "default") -> Flask:
     app.config.from_object(config[config_name])
 
     db.init_app(app)
-    app.config.setdefault("UPLOAD_FOLDER", os.path.join(app.root_path, "static", "uploads"))
-    app.config.setdefault("ALLOWED_IMAGE_EXTENSIONS", {"png", "jpg", "jpeg", "webp"})
+    app.config.setdefault(
+        "UPLOAD_FOLDER", os.path.join(app.root_path, "static", "uploads")
+    )
+    app.config.setdefault(
+        "ALLOWED_IMAGE_EXTENSIONS", {"png", "jpg", "jpeg", "webp"}
+    )
+    app.config.setdefault("DISPLAY_TIMEZONE", timezone(timedelta(hours=3)))  # MSK
     login_manager.init_app(app)
 
     from models import User, Room, Booking, Hotel  # noqa: F401
+
+    @app.template_filter("msk")
+    def as_msk(dt):
+        """Convert naive UTC datetime to Moscow time for display."""
+        if not dt:
+            return dt
+        target_tz = app.config["DISPLAY_TIMEZONE"]
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(target_tz)
 
     def save_room_image(file_storage):
         """Validate and save uploaded room image, return filename or None."""
@@ -240,6 +255,15 @@ def create_app(config_name: str = "default") -> Flask:
         from models import Room, Booking
 
         room = Room.query.get_or_404(room_id)
+        today = date.today()
+        is_currently_booked = (
+            Booking.query.filter(
+                Booking.room_id == room.id,
+                Booking.check_in <= today,
+                Booking.check_out > today,
+            ).first()
+            is not None
+        )
 
         if request.method == "POST":
             check_in_str = request.form.get("check_in")
@@ -280,7 +304,11 @@ def create_app(config_name: str = "default") -> Flask:
             flash("Бронирование успешно создано", "success")
             return redirect(url_for("my_bookings"))
 
-        return render_template("booking/book_room.html", room=room)
+        return render_template(
+            "booking/book_room.html",
+            room=room,
+            is_currently_booked=is_currently_booked,
+        )
 
     @app.route("/my-bookings")
     @login_required

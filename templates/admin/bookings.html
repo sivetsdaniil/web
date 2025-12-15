@@ -32,7 +32,7 @@
                     <td>{{ booking.check_in.strftime("%d.%m.%Y") }}</td>
                     <td>{{ booking.check_out.strftime("%d.%m.%Y") }}</td>
                     <td>{{ booking.total_price }} ₽</td>
-                    <td>{{ booking.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+                    <td>{{ (booking.created_at|msk).strftime("%d.%m.%Y %H:%M") }}</td>
                 </tr>
             {% endfor %}
             </tbody>

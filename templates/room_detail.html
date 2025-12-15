@@ -56,7 +56,7 @@
                 <a href="{{ url_for('book_room', room_id=room.id) }}" class="btn btn-primary w-100 mb-2 {% if is_currently_booked %}disabled{% endif %}">Перейти к бронированию</a>
                 <p class="text-muted small mb-0">
                     {% if is_currently_booked %}
-                        Сейчас номер занят — попробуйте выбрать другие даты.
+                        Сейчас номер занят — посмотрите другие варианты.
                     {% else %}
                         Выберите даты на следующем шаге.
                     {% endif %}
