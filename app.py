@@ -33,6 +33,54 @@ def create_app(config_name: str = "default") -> Flask:
 
     from models import User, Room, Booking, Hotel  # noqa: F401
 
+    def ensure_schema_and_seed():
+        """Создать таблицы и заполнить примерами, если база пустая."""
+        db.create_all()
+        # Однократное добавление столбца hotel_id для существующей таблицы rooms (SQLite)
+        try:
+            db.session.execute(text("ALTER TABLE rooms ADD COLUMN hotel_id INTEGER"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        if not Hotel.query.first():
+            hotel_a = Hotel(name="Отель Центр", city="Москва")
+            hotel_b = Hotel(name="Городской", city="Санкт-Петербург")
+            db.session.add_all([hotel_a, hotel_b])
+            db.session.flush()
+
+            sample_rooms = [
+                Room(
+                    number="101",
+                    hotel_id=hotel_a.id,
+                    room_type="Стандарт",
+                    price_per_night=4500,
+                    capacity=2,
+                    description="Уютный номер в центре города.",
+                ),
+                Room(
+                    number="202",
+                    hotel_id=hotel_a.id,
+                    room_type="Делюкс",
+                    price_per_night=7200,
+                    capacity=3,
+                    description="Просторный номер с видом на город.",
+                ),
+                Room(
+                    number="301",
+                    hotel_id=hotel_b.id,
+                    room_type="Стандарт",
+                    price_per_night=3800,
+                    capacity=2,
+                    description="Спокойный номер рядом с набережной.",
+                ),
+            ]
+            db.session.add_all(sample_rooms)
+            db.session.commit()
+
+    with app.app_context():
+        ensure_schema_and_seed()
+
     @login_manager.user_loader
     def load_user(user_id: str):
         return User.query.get(int(user_id))
@@ -397,7 +445,7 @@ def create_app(config_name: str = "default") -> Flask:
 if __name__ == "__main__":
     application = create_app()
     with application.app_context():
-        from models import User, Room, Booking  # noqa: F401
+        from models import User, Room, Booking, Hotel  # noqa: F401
 
         db.create_all()
         # Однократное добавление столбца hotel_id для существующей таблицы rooms (SQLite)
@@ -406,6 +454,42 @@ if __name__ == "__main__":
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+        # Примерные данные, если база пуста
+        if not Hotel.query.first():
+            hotel_a = Hotel(name="Отель Центр", city="Москва")
+            hotel_b = Hotel(name="Городской", city="Санкт-Петербург")
+            db.session.add_all([hotel_a, hotel_b])
+            db.session.flush()
+
+            sample_rooms = [
+                Room(
+                    number="101",
+                    hotel_id=hotel_a.id,
+                    room_type="Стандарт",
+                    price_per_night=4500,
+                    capacity=2,
+                    description="Уютный номер в центре города.",
+                ),
+                Room(
+                    number="202",
+                    hotel_id=hotel_a.id,
+                    room_type="Делюкс",
+                    price_per_night=7200,
+                    capacity=3,
+                    description="Просторный номер с видом на город.",
+                ),
+                Room(
+                    number="301",
+                    hotel_id=hotel_b.id,
+                    room_type="Стандарт",
+                    price_per_night=3800,
+                    capacity=2,
+                    description="Спокойный номер рядом с набережной.",
+                ),
+            ]
+            db.session.add_all(sample_rooms)
+            db.session.commit()
     application.run()
 
 
