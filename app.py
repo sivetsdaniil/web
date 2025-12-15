@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, date
 from sqlalchemy import text
 
@@ -29,9 +30,33 @@ def create_app(config_name: str = "default") -> Flask:
     app.config.from_object(config[config_name])
 
     db.init_app(app)
+    app.config.setdefault("UPLOAD_FOLDER", os.path.join(app.root_path, "static", "uploads"))
+    app.config.setdefault("ALLOWED_IMAGE_EXTENSIONS", {"png", "jpg", "jpeg", "webp"})
     login_manager.init_app(app)
 
     from models import User, Room, Booking, Hotel  # noqa: F401
+
+    def save_room_image(file_storage):
+        """Validate and save uploaded room image, return filename or None."""
+        if not file_storage or not file_storage.filename:
+            return None
+        filename = file_storage.filename
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext not in app.config["ALLOWED_IMAGE_EXTENSIONS"]:
+            flash("Разрешены только изображения: png, jpg, jpeg, webp", "danger")
+            return None
+
+        from werkzeug.utils import secure_filename
+
+        safe_name = secure_filename(filename)
+        # ensure unique name
+        ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+        final_name = f"{ts}_{safe_name}"
+        upload_dir = app.config["UPLOAD_FOLDER"]
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, final_name)
+        file_storage.save(file_path)
+        return final_name
 
     def ensure_schema_and_seed():
         """Создать таблицы и заполнить примерами, если база пустая."""
@@ -39,6 +64,17 @@ def create_app(config_name: str = "default") -> Flask:
         # Однократное добавление столбца hotel_id для существующей таблицы rooms (SQLite)
         try:
             db.session.execute(text("ALTER TABLE rooms ADD COLUMN hotel_id INTEGER"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            db.session.execute(text("ALTER TABLE rooms ADD COLUMN image_filename VARCHAR(255)"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        # Добавление столбца image_filename для таблицы rooms
+        try:
+            db.session.execute(text("ALTER TABLE rooms ADD COLUMN image_filename VARCHAR(255)"))
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -290,10 +326,12 @@ def create_app(config_name: str = "default") -> Flask:
             capacity = int(request.form.get("capacity", "1") or "1")
             description = request.form.get("description", "").strip()
             hotel_id = request.form.get("hotel_id", type=int)
+            image_file = request.files.get("image")
 
             if not number or not room_type or price_per_night <= 0 or not hotel_id:
                 flash("Заполните обязательные поля и выберите отель", "danger")
             else:
+                image_filename = save_room_image(image_file)
                 room = Room(
                     number=number,
                     room_type=room_type,
@@ -301,6 +339,7 @@ def create_app(config_name: str = "default") -> Flask:
                     price_per_night=price_per_night,
                     capacity=capacity,
                     description=description,
+                    image_filename=image_filename,
                 )
                 db.session.add(room)
                 db.session.commit()
@@ -330,11 +369,15 @@ def create_app(config_name: str = "default") -> Flask:
             room.capacity = int(request.form.get("capacity", room.capacity) or "1")
             room.description = request.form.get("description", "").strip()
             hotel_id = request.form.get("hotel_id", type=int)
+            image_file = request.files.get("image")
 
             if not room.number or not room.room_type or room.price_per_night <= 0 or not hotel_id:
                 flash("Заполните обязательные поля и выберите отель", "danger")
             else:
                 room.hotel_id = hotel_id
+                new_image = save_room_image(image_file)
+                if new_image:
+                    room.image_filename = new_image
                 db.session.commit()
                 flash("Номер обновлён", "success")
                 return redirect(url_for("admin_rooms"))

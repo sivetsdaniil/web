@@ -38,6 +38,7 @@ class Room(db.Model):
     description = db.Column(db.Text, nullable=True)
     price_per_night = db.Column(db.Float, nullable=False)
     capacity = db.Column(db.Integer, nullable=False, default=1)
+    image_filename = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     hotel = db.relationship("Hotel", back_populates="rooms")
