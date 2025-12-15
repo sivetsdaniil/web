@@ -445,7 +445,7 @@ def create_app(config_name: str = "default") -> Flask:
     return app
 
 
-Ёif __name__ == "__main__":
+if __name__ == "__main__":
     application = create_app()
     with application.app_context():
         from models import User, Room, Booking, Hotel  # noqa: F401
