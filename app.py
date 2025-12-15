@@ -93,8 +93,6 @@ def create_app(config_name: str = "default") -> Flask:
         hotels = Hotel.query.order_by(Hotel.name).all()
 
         selected_hotel_id = request.args.get("hotel_id", type=int)
-        if hotels and not selected_hotel_id:
-            selected_hotel_id = hotels[0].id
 
         rooms_query = Room.query.order_by(Room.price_per_night)
         if selected_hotel_id:
@@ -374,9 +372,14 @@ def create_app(config_name: str = "default") -> Flask:
             flash("Недостаточно прав", "danger")
             return redirect(url_for("index"))
 
+        from sqlalchemy.orm import joinedload
         from models import Hotel
 
-        hotels = Hotel.query.order_by(Hotel.name).all()
+        hotels = (
+            Hotel.query.options(joinedload(Hotel.rooms))
+            .order_by(Hotel.name)
+            .all()
+        )
         return render_template("admin/hotels.html", hotels=hotels)
 
     @app.route("/admin/hotels/create", methods=["GET", "POST"])
@@ -442,7 +445,7 @@ def create_app(config_name: str = "default") -> Flask:
     return app
 
 
-if __name__ == "__main__":
+Ёif __name__ == "__main__":
     application = create_app()
     with application.app_context():
         from models import User, Room, Booking, Hotel  # noqa: F401

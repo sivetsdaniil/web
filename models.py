@@ -73,7 +73,8 @@ class Hotel(db.Model):
     city = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    rooms = db.relationship("Room", back_populates="hotel", lazy="dynamic")
+    # dynamic мешает eager loading; используем обычный загрузчик
+    rooms = db.relationship("Room", back_populates="hotel", lazy="select")
 
     def __repr__(self) -> str:  # pragma: no cover - для отладки
         return f"<Hotel {self.name}>"

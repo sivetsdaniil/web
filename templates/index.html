@@ -32,6 +32,7 @@
         <form method="get" class="d-flex align-items-center gap-2">
             <label for="hotel_id" class="text-muted small mb-0">Отель</label>
             <select id="hotel_id" name="hotel_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="" {% if not selected_hotel_id %}selected{% endif %}>Все отели</option>
                 {% for hotel in hotels %}
                     <option value="{{ hotel.id }}" {% if hotel.id == selected_hotel_id %}selected{% endif %}>{{ hotel.name }}{% if hotel.city %} — {{ hotel.city }}{% endif %}</option>
                 {% endfor %}
