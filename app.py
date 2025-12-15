@@ -58,6 +58,18 @@ def create_app(config_name: str = "default") -> Flask:
         file_storage.save(file_path)
         return final_name
 
+    def delete_room_image(filename: str | None):
+        if not filename:
+            return
+        upload_dir = app.config["UPLOAD_FOLDER"]
+        file_path = os.path.join(upload_dir, filename)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        except Exception:
+            # Не критично, просто пропускаем
+            pass
+
     def ensure_schema_and_seed():
         """Создать таблицы и заполнить примерами, если база пустая."""
         db.create_all()
@@ -370,6 +382,7 @@ def create_app(config_name: str = "default") -> Flask:
             room.description = request.form.get("description", "").strip()
             hotel_id = request.form.get("hotel_id", type=int)
             image_file = request.files.get("image")
+            remove_image = request.form.get("remove_image") == "on"
 
             if not room.number or not room.room_type or room.price_per_night <= 0 or not hotel_id:
                 flash("Заполните обязательные поля и выберите отель", "danger")
@@ -377,7 +390,11 @@ def create_app(config_name: str = "default") -> Flask:
                 room.hotel_id = hotel_id
                 new_image = save_room_image(image_file)
                 if new_image:
+                    delete_room_image(room.image_filename)
                     room.image_filename = new_image
+                elif remove_image:
+                    delete_room_image(room.image_filename)
+                    room.image_filename = None
                 db.session.commit()
                 flash("Номер обновлён", "success")
                 return redirect(url_for("admin_rooms"))
